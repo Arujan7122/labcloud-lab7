@@ -12,7 +12,7 @@ Render үшін қосымша GitHub API secret қажет емес. `scripts/d
 
 ## Орта және сервер
 
-APP_ENV=production, STORAGE_BACKEND=database. DATABASE_URL PostgreSQL байланысынан Blueprint арқылы алынады, кодта сақталмайды. APP_VERSION image-дегі app.py-ден алынады; Dashboard-та бұрынғы APP_VERSION override бар болса, оны алып тастау не жаңа нұсқамен сәйкестендіру керек. Нақты source commit `/` жауабының revision өрісінен тексеріледі. instance — Render instance идентификаторы; ауысуы қайта іске қосылған жаңа ортаны дәлелдеуге көмектеседі.
+APP_ENV=production, STORAGE_BACKEND=database. DATABASE_URL PostgreSQL байланысынан Blueprint арқылы алынады, кодта сақталмайды. APP_VERSION Blueprint арқылы нұсқа белгісін береді; source commit revision өрісінен тәуелсіз тексеріледі. Нақты source commit `/` жауабының revision өрісінен тексеріледі. instance — Render instance идентификаторы; ауысуы қайта іске қосылған жаңа ортаны дәлелдеуге көмектеседі.
 
 Gunicorn 0.0.0.0:${PORT:-8000} адресіне байланады. Docker CMD автоматты қолданылады. Health check — /health. Logs — Render service Logs. Web контейнері UID 10001 қолданады. Web жоспары және PostgreSQL жоспары — Free; қосымша ақылы ресурс жасалмайды.
 
