@@ -1,0 +1,87 @@
+name: LabCloud CI
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: labcloud-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: labcloud_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["127.0.0.1:5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres@127.0.0.1:5432/labcloud_test
+      APP_ENV: test
+      STORAGE_BACKEND: memory
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Check code
+        run: ruff check .
+      - name: Run tests
+        run: python -m pytest -v --junitxml=results.xml
+      - name: Build Docker image
+        run: docker build -t labcloud:test .
+      - name: Container smoke and least privilege
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name labcloud-ci -p 127.0.0.1:18000:8080 -e PORT=8080 -e APP_ENV=test --cap-drop ALL --security-opt no-new-privileges labcloud:test
+          trap 'docker logs labcloud-ci; docker rm -f labcloud-ci' EXIT
+          test "$(docker exec labcloud-ci id -u)" != 0
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18000/health; then break; fi
+            sleep 1
+          done
+          python scripts/verify_http.py --url http://127.0.0.1:18000 --count 50 --output evidence/container.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-evidence
+          path: |
+            results.xml
+            evidence/container.json
+  deploy:
+    name: Deploy verified main
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RENDER_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Deploy exact tested commit and wait for live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+        run: python scripts/deploy_render.py
+      - name: Verify public API and limited load
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+        run: python scripts/verify_http.py --public --count 75 --output evidence/public.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-evidence
+          path: evidence/public.json

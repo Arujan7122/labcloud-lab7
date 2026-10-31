@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: labcloud
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_VERSION
+        value: 1.1.0
+      - key: STORAGE_BACKEND
+        value: database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: labcloud-db
+          property: connectionString
+databases:
+  - name: labcloud-db
+    plan: free
+    databaseName: labcloud
+    user: labcloud
