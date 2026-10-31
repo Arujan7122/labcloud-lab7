@@ -99,7 +99,7 @@ def create_app(config=None):
     application.json.ensure_ascii = False
     application.config.update(
         APP_ENV=os.getenv('APP_ENV', 'development'),
-        APP_VERSION=os.getenv('APP_VERSION', '1.1.0'),
+        APP_VERSION=os.getenv('APP_VERSION', '1.2.0'),
         STORAGE_BACKEND=os.getenv('STORAGE_BACKEND', 'database'),
         DATABASE_URL=os.getenv('DATABASE_URL'),
         MAX_CONTENT_LENGTH=16 * 1024,
@@ -149,7 +149,9 @@ def create_app(config=None):
     def index():
         return jsonify(application='LabCloud', status='running',
                        environment=application.config['APP_ENV'],
-                       version=application.config['APP_VERSION']), 200
+                       version=application.config['APP_VERSION'],
+                       revision=os.getenv('RENDER_GIT_COMMIT', 'local'),
+                       instance=os.getenv('RENDER_INSTANCE_ID', 'local')), 200
 
     @application.get('/health')
     def health():

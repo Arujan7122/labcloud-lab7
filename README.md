@@ -71,7 +71,7 @@ DB порты хостқа ашылмайды; тек web порты localhost-�
 
 ## GitHub және PaaS
 
-Орналастыруға Render таңдалған. `render.yaml` — Docker web service және сыртқы PostgreSQL үлгісі; автоматты deploy өшірілген. CI/CD тесттен кейін дәл тексерілген commit SHA-ны Render API арқылы жариялайды, `live` күйін күтеді және public API-ді тексереді.
+Орналастыруға Render таңдалған. `render.yaml` — Docker web service және сыртқы PostgreSQL үлгісі; автоматты deploy `checksPass` режимінде. Render GitHub CI сәтті өткен соң main commit-ін жариялайды. Жария URL: https://labcloud-q2il.onrender.com . API тексеруі `scripts/verify_http.py --public` арқылы жасалады.
 
 Баптау нұсқаулығы: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). A–E талдауы мен сызбалар: [docs/TASKS_A_E.md](docs/TASKS_A_E.md). Нақты орындалу күйі: жергілікті `Есеп.md` және `evidence/status.json`.
 

@@ -60,28 +60,5 @@ jobs:
           path: |
             results.xml
             evidence/container.json
-  deploy:
-    name: Deploy verified main
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RENDER_DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Deploy exact tested commit and wait for live
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
-        run: python scripts/deploy_render.py
-      - name: Verify public API and limited load
-        env:
-          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
-        run: python scripts/verify_http.py --public --count 75 --output evidence/public.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: public-evidence
-          path: evidence/public.json
+
+# Continuous delivery: Render watches this workflow via autoDeployTrigger: checksPass.

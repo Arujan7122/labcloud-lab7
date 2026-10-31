@@ -4,13 +4,11 @@ services:
     runtime: docker
     plan: free
     branch: main
-    autoDeployTrigger: 'off'
+    autoDeployTrigger: checksPass
     healthCheckPath: /health
     envVars:
       - key: APP_ENV
         value: production
-      - key: APP_VERSION
-        value: 1.1.0
       - key: STORAGE_BACKEND
         value: database
       - key: DATABASE_URL
