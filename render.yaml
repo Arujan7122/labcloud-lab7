@@ -10,7 +10,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_VERSION
-        value: 1.2.0
+        value: 1.2.1
       - key: STORAGE_BACKEND
         value: database
       - key: DATABASE_URL

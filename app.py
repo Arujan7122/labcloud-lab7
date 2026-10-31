@@ -99,7 +99,7 @@ def create_app(config=None):
     application.json.ensure_ascii = False
     application.config.update(
         APP_ENV=os.getenv('APP_ENV', 'development'),
-        APP_VERSION=os.getenv('APP_VERSION', '1.2.0'),
+        APP_VERSION=os.getenv('APP_VERSION', '1.2.1'),
         STORAGE_BACKEND=os.getenv('STORAGE_BACKEND', 'database'),
         DATABASE_URL=os.getenv('DATABASE_URL'),
         MAX_CONTENT_LENGTH=16 * 1024,
