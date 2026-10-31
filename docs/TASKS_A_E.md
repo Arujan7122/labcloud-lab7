@@ -14,7 +14,7 @@ SQLite файлы PaaS-тың ephemeral filesystem-інде орналасса, 
 
 ## B Нұсқаларды басқару
 
-Жұмыс ағыны: development → CI → Pull Request → required checks → main → deployment. Қате тесттің exit code-ы 1; CI job failed болады. Branch protection required check өтпесе біріктіруге жол бермейді. `needs: test` deploy job-ын өткізбейді, ал Render auto-deploy өшірулі болғандықтан жанама жариялау болмайды.
+Жұмыс ағыны: development → CI → Pull Request → required checks → main → deployment. Қате тесттің exit code-ы 1; CI job failed болады. Branch protection required check өтпесе біріктіруге жол бермейді. Render `checksPass` режимі main CI сәтті аяқталуын күтеді. Main-ға тек тексерілген PR біріктіріледі; конфигурациялық Blueprint sync өзгерісі де осылай тексеріледі.
 
 ```mermaid
 flowchart LR

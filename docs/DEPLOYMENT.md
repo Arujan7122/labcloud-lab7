@@ -1,51 +1,37 @@
-# GitHub және Render орналастыру тәртібі
+# LabCloud Render орналастыруы
 
-Бұл файл конфигурация қадамдарын түсіндіреді. Нақты орындалған әрекеттер мен сілтемелер `evidence/status.json` және есепте көрсетіледі.
+Жария URL: https://labcloud-q2il.onrender.com
 
-## GitHub
+## Автоматты жариялау
 
-1. `main` және `development` тармақтарын remote-қа жүктеу.
-2. Development-та өзгерту, Pull Request ашу, `Test and build` нәтижесін күту.
-3. `main` branch protection: require pull request, require status check `Test and build`, strict up-to-date, enforce administrators, force push пен deletion-ды өшіру.
-4. Қате тест бар commit CI-ді қызыл етуі тиіс; содан кейін түзетілген commit жасыл болғанда PR біріктіріледі. `needs: test` deploy-ды тесттен кейін ғана орындайды. Render-де бөлек On Commit auto-deploy қосылмауы керек, өйткені ол CI қақпасын айналып өтуі мүмкін.
+GitHub development тармағында код өзгертіледі. Pull Request үшін main branch protection міндетті `Test and build` тексеруін талап етеді. Ол Ruff, pytest, PostgreSQL интеграциясын, Docker build және контейнердегі HTTP сұрауларын орындайды. PR тек тексеру өткен соң main-ға біріктіріледі.
 
-## Render
+`render.yaml` ішіндегі `autoDeployTrigger: checksPass` арқылы Render main тармағындағы CI аяқталғанын күтеді. Қате CI өзгерісті автоматты жариялауға өткізбейді. Blueprint Auto Sync қосулы болуы керек. Blueprint конфигурациясының өзгерісі ресурс sync жасай алатындықтан, render.yaml да міндетті тексерілген PR арқылы өзгереді.
 
-1. GitHub аккаунтын Render-ге байланыстырып, осы репозиторийден New Blueprint жасаңыз. `render.yaml` таңдалады. Free web және Free PostgreSQL жоспарын тексеріңіз; төлемді жоспарды келісімсіз таңдамаңыз.
-2. Web service: Dockerfile, branch main, health check `/health`, `APP_ENV=production`, `STORAGE_BACKEND=database`, `APP_VERSION=1.1.0`. `DATABASE_URL` Blueprint арқылы DB-ден құпия байланыс ретінде беріледі.
-3. Render `PORT` бергенде Docker CMD оны қолданады. Егер startup override қажет болса: `gunicorn --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - app:app`.
-4. Render service ID мен нақты HTTPS URL-ді алыңыз. GitHub Settings → Environments → production ішіне secret `RENDER_API_KEY`, variables `RENDER_SERVICE_ID`, `PUBLIC_URL` орнатыңыз. Токенді чатқа, Git-ке немесе `.env` файлын жүктеу арқылы жібермеңіз.
-5. Repository variable `RENDER_DEPLOY_ENABLED=true` орнатыңыз. Ол жоқ кезде remote deploy job әдейі іске қосылмайды; бұл жариялау аяқталды дегенді білдірмейді.
-6. Main-ға тексерілген commit жүктелгенде workflow `scripts/deploy_render.py` арқылы сол SHA-ны жариялайды. Скрипт API-дің 201 жауабымен шектелмей, `live` күйін күтеді. Кейін `scripts/verify_http.py --public` сыртқы URL-ге нақты сұраулар жібереді.
-7. Логтар: Render → service → Logs; оқиғалар: Events/Deploys. GitHub Actions артефактісінен `public-evidence` жүктеңіз.
+Render үшін қосымша GitHub API secret қажет емес. `scripts/deploy_render.py` балама қолмен/API басқаруға арналған; ол қазіргі автоматты жолда қолданылмайды. CI-де жария URL-ді күтетін job жоқ: ол Render күтіп тұрған checks тізімін тұйық циклге түсірмеуі үшін тексеру жариялаудан кейін бөлек орындалады.
 
-Жария API-ді қолмен тексеру:
+## Орта және сервер
+
+APP_ENV=production, STORAGE_BACKEND=database. DATABASE_URL PostgreSQL байланысынан Blueprint арқылы алынады, кодта сақталмайды. APP_VERSION Blueprint арқылы нұсқа белгісін береді; source commit revision өрісінен тәуелсіз тексеріледі. Нақты source commit `/` жауабының revision өрісінен тексеріледі. instance — Render instance идентификаторы; ауысуы қайта іске қосылған жаңа ортаны дәлелдеуге көмектеседі.
+
+Gunicorn 0.0.0.0:${PORT:-8000} адресіне байланады. Docker CMD автоматты қолданылады. Health check — /health. Logs — Render service Logs. Web контейнері UID 10001 қолданады. Web жоспары және PostgreSQL жоспары — Free; қосымша ақылы ресурс жасалмайды.
+
+## Нақты сыртқы тексеру
 
 ```powershell
-$env:PUBLIC_URL = Read-Host 'Render HTTPS URL'
-.\.venv\Scripts\python.exe scripts/verify_http.py --public --count 75 --output evidence/public.json
+.\.venv\Scripts\python.exe scripts/verify_http.py --url https://labcloud-q2il.onrender.com --public --count 75 --output evidence/public.json
 ```
 
-Бұл скрипт сынақ өтінімін жасайды, сәтті POST/GET, 400/404 жағдайларын және 75 health сұрауын дәлел ретінде сақтайды. URL берілмесе не нәтиже қате болса, тексеру сәтсіз аяқталады.
+Тексеру бір сынақ өтінімін жасайды, оның ID-сін қайта оқиды, қате деректерді және 75 тізбекті health сұрауын тексереді. evidence/cloud-persistence-before.json және cloud release дәлелдері бастапқы өтінімнің жаңа deploy-дан кейін де сақталуын көрсетеді.
 
-## A және қайта орналастыру дәлелі
+## Шектеулер және ресурстар
 
-Жария API-де жаңа өтінім жасаңыз, ID мен толық JSON-ды evidence-ке сақтаңыз. Render-де Restart service орындап, `/health` 200 болған соң сол ID-ді қайта оқыңыз. Одан кейін жаңа нұсқаны main PR арқылы жариялап, нұсқаны және бұрынғы ID-ді қайта тексеріңіз. Бұл PostgreSQL арқылы restart/redeploy кезіндегі сақталуды дәлелдейді. Жергілікті SQLite тәжірибесі бұлттық PostgreSQL дәлелін алмастырмайды.
-
-## D диагностикасы
-
-Өндірістік емес жеке тест сервисінде, оқытушы келісімінен кейін ғана startup target-ті `labcloud_typo:app` етіп ауыстырыңыз. Логтағы ModuleNotFoundError-ды тіркеңіз, `app:app` етіп түзетіп, `/health` 200 екенін сақтаңыз. Жергілікті қауіпсіз баламасы `scripts/run_local_experiments.py` ішінде орындалған.
-
-## Ресурстарды тоқтату
-
-Тексеруден кейін тест сервисін Render Dashboard-та Suspend етіңіз. Қажет болмаса, DB-ні экспорттап алып жойыңыз. Free PostgreSQL мерзімі 30 күн; free web ұйқы режиміне өте алады. Жергілікті Docker ресурстарына `docker compose stop` қолданыңыз.
+Free web ұйқы режиміне өте алады. Free PostgreSQL 30 күннен кейін мерзімі бітуі мүмкін. Оқу API-і аутентификациясыз; тек жасанды өтінімдерге арналған. Тексеруден кейін ресурс қажет болмаса Render Dashboard-та Suspend жасаңыз; дерек керек болса DB-ні жоймас бұрын экспорттаңыз.
 
 ## Ресми дереккөздер
 
-- [Flask on Render](https://render.com/docs/deploy-flask)
-- [Blueprint specification](https://render.com/docs/blueprint-spec)
-- [Health checks](https://render.com/docs/health-checks)
-- [Trigger deploy API](https://api-docs.render.com/reference/create-deploy)
-- [Retrieve deploy API](https://api-docs.render.com/reference/retrieve-deploy)
-- [Free plan limits](https://render.com/docs/free)
-- [GitHub protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [Render CI және deploy](https://render.com/docs/deploys)
+- [Blueprint autoDeployTrigger](https://render.com/docs/blueprint-spec)
+- [Blueprint sync](https://render.com/docs/infrastructure-as-code)
+- [Revision және instance айнымалылары](https://render.com/docs/environment-variables)
+- [Free жоспар шектеулері](https://render.com/docs/free)
